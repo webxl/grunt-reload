@@ -1,0 +1,45 @@
+{
+  "name": "grunt-reload",
+  "description": "A grunt task and reverse proxy that enables live reloading of updated files in the browser.",
+  "version": "0.1.0",
+  "homepage": "https://github.com/mattm/grunt-reload",
+  "author": {
+    "name": "webxl",
+    "email": "mm@webxl.net",
+    "url": "http://webxl.net"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/webxl/grunt-reload.git"
+  },
+  "bugs": {
+    "url": "https://github.com/webxl/grunt-reload/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/webxl/grunt-reload/blob/master/LICENSE-MIT"
+    }
+  ],
+  "main": "grunt.js",
+  "bin": "bin/grunt-reload",
+  "engines": {
+    "node": ">=0.6.0"
+  },
+  "scripts": {
+    "test": "grunt test"
+  },
+  "dependencies": {
+    "grunt": "~0.3.9",
+    "connect": "1.8.5",
+    "buffers": "latest",
+    "http-proxy": "latest",
+    "websocket": "latest"
+  },
+  "devDependencies": {
+    "grunt": "~0.3.9"
+  },
+  "keywords": [
+    "gruntplugin"
+  ]
+}

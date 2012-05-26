@@ -1,0 +1,121 @@
+/*
+ * grunt-reload
+ * https://github.com/mattm/grunt-reload
+ *
+ * Copyright (c) 2012 webxl
+ * Licensed under the MIT license.
+ */
+
+
+var path = require('path'),
+    http = require('http'),
+    fs = require("fs"),
+    connect = require('connect'),
+    buffers = require('buffers'),
+    httpProxy = require('http-proxy');
+
+module.exports = function(grunt) {
+
+  // Please see the grunt documentation for more information regarding task and
+  // helper creation: https://github.com/cowboy/grunt/blob/master/docs/toc.md
+
+  // ==========================================================================
+  // TASKS
+  // ==========================================================================
+
+  grunt.registerTask('reloadServer', 'Start a server that will send a reload command over a socket connection.', function() {
+      // Get values from config, or use defaults.
+      var port = grunt.config('reload.port') || 8000;
+      var base = path.resolve(grunt.config('server.base') || '.');
+      var stub = connect(connect.router(function (app) {
+          app.post("/", function (req, res) {
+              var msg = 'refresh', //req.body.message,
+                  connections = wsServer.connections;
+
+              for (var i = 0; i < connections.length; i++) {
+                  connections[i].sendUTF(msg);
+              }
+          });
+
+          // Todo: figure out a better way to handle this
+          app.get("/client.js", function (req, res) {
+              fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res);
+          });
+      }));
+
+      // proxy
+
+      var options = {
+          target:{
+              host:grunt.config('reload.proxy.host') || 'localhost',
+              path:grunt.config('reload.proxy.path') || '/', // not yet supported by http-proxy
+              port:grunt.config('reload.proxy.port') || 80
+          }
+      };
+
+      var proxy = new httpProxy.HttpProxy(options);
+
+      var proxyStub = function (req, res) {
+
+          // monkey patch response, delay header
+          var _write = res.write, _writeHead = res.writeHead, _end = res.end, _statusCode, _headers, tmpBuffer;
+
+          res.write = function (data) {
+              if (tmpBuffer) {
+                  tmpBuffer.push(data);
+              } else {
+                  _write.call(res, data);
+              }
+          };
+
+          res.writeHead = function (statusCode, headers) {
+              _statusCode = statusCode;
+              _headers = headers;
+              if (/html/.test(_headers["content-type"])) {
+                  // defer html & headers
+                  tmpBuffer = buffers();
+              } else {
+                  _writeHead.call(res, _statusCode, _headers);
+              }
+          };
+
+          res.end = function () {
+              if (tmpBuffer) {
+                  var html = tmpBuffer.toString(),
+                      scriptTag = '<script src="/__reload/client.js"></script>';
+
+                  html = html.replace('</body>', scriptTag + '</body>');
+                  _headers['content-length'] = html.length;
+                  _writeHead.call(res, _statusCode, _headers);
+                  _write.call(res, html);
+              }
+              _end.call(res);
+          };
+
+          proxy.proxyRequest(req, res);
+      };
+
+      // kick-off
+
+      var site = connect()
+          //.use(connect.bodyParser()) // causes issue with proxy POST
+          .use('/__reload', stub)
+          .use(proxyStub)
+          .listen(port);
+
+      var WebSocketServer = require("websocket").server;
+
+      console.log("Reload task support enabled. Port: " + port);
+
+      wsServer = new WebSocketServer({
+          httpServer:site,
+          autoAcceptConnections:true // DON'T use on production!
+      });
+
+      wsServer.on('connect', function () {
+          process.stdout.write('|');//(new Date()) + ' Connection accepted. \n');
+      });
+
+  });
+
+};
