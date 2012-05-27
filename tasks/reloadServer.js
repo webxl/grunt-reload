@@ -1,6 +1,6 @@
 /*
  * grunt-reload
- * https://github.com/mattm/grunt-reload
+ * https://github.com/webxl/grunt-reload
  *
  * Copyright (c) 2012 webxl
  * Licensed under the MIT license.
@@ -14,108 +14,105 @@ var path = require('path'),
     buffers = require('buffers'),
     httpProxy = require('http-proxy');
 
-module.exports = function(grunt) {
+module.exports = function (grunt) {
 
-  // Please see the grunt documentation for more information regarding task and
-  // helper creation: https://github.com/cowboy/grunt/blob/master/docs/toc.md
+    // ==========================================================================
+    // TASKS
+    // ==========================================================================
 
-  // ==========================================================================
-  // TASKS
-  // ==========================================================================
+    grunt.registerTask('reloadServer', 'Start a server that will send a reload command over a websocket connection.', function () {
+        // Get values from config, or use defaults.
+        var port = grunt.config('reload.port') || 8000;
+        var base = path.resolve(grunt.config('server.base') || '.');
+        var options = {
+            target:{
+                host:grunt.config('reload.proxy.host') || 'localhost',
+                path:grunt.config('reload.proxy.path') || '/', // not yet supported by http-proxy
+                port:grunt.config('reload.proxy.port') || 80
+            }
+        };
 
-  grunt.registerTask('reloadServer', 'Start a server that will send a reload command over a socket connection.', function() {
-      // Get values from config, or use defaults.
-      var port = grunt.config('reload.port') || 8000;
-      var base = path.resolve(grunt.config('server.base') || '.');
-      var stub = connect(connect.router(function (app) {
-          app.post("/", function (req, res) {
-              var msg = 'refresh', //req.body.message,
-                  connections = wsServer.connections;
+        var proxy = new httpProxy.HttpProxy(options);
 
-              for (var i = 0; i < connections.length; i++) {
-                  connections[i].sendUTF(msg);
-              }
-          });
+        var proxyStub = function (req, res) {
 
-          // Todo: figure out a better way to handle this
-          app.get("/client.js", function (req, res) {
-              fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res);
-          });
-      }));
+            // monkey patch response, delay header
+            var _write = res.write, _writeHead = res.writeHead, _end = res.end, _statusCode, _headers, tmpBuffer;
 
-      // proxy
+            res.write = function (data) {
+                if (tmpBuffer) {
+                    tmpBuffer.push(data);
+                } else {
+                    _write.call(res, data);
+                }
+            };
 
-      var options = {
-          target:{
-              host:grunt.config('reload.proxy.host') || 'localhost',
-              path:grunt.config('reload.proxy.path') || '/', // not yet supported by http-proxy
-              port:grunt.config('reload.proxy.port') || 80
-          }
-      };
+            res.writeHead = function (statusCode, headers) {
+                _statusCode = statusCode;
+                _headers = headers;
+                if (/html/.test(_headers["content-type"])) {
+                    // defer html & headers
+                    tmpBuffer = buffers();
+                } else {
+                    _writeHead.call(res, _statusCode, _headers);
+                }
+            };
 
-      var proxy = new httpProxy.HttpProxy(options);
+            res.end = function () {
+                if (tmpBuffer) {
+                    var html = tmpBuffer.toString(),
+                        scriptTag = '<script src="/__reload/client.js"></script>';
 
-      var proxyStub = function (req, res) {
+                    html = html.replace('</body>', scriptTag + '</body>');
+                    _headers['content-length'] = html.length;
+                    _writeHead.call(res, _statusCode, _headers);
+                    _write.call(res, html);
+                }
+                _end.call(res);
+            };
 
-          // monkey patch response, delay header
-          var _write = res.write, _writeHead = res.writeHead, _end = res.end, _statusCode, _headers, tmpBuffer;
+            proxy.proxyRequest(req, res);
+        };
 
-          res.write = function (data) {
-              if (tmpBuffer) {
-                  tmpBuffer.push(data);
-              } else {
-                  _write.call(res, data);
-              }
-          };
+        var stub = connect(connect.router(function (app) {
+            app.post("/", function (req, res) {
+                var msg = 'refresh', //req.body.message,
+                    connections = wsServer.connections;
 
-          res.writeHead = function (statusCode, headers) {
-              _statusCode = statusCode;
-              _headers = headers;
-              if (/html/.test(_headers["content-type"])) {
-                  // defer html & headers
-                  tmpBuffer = buffers();
-              } else {
-                  _writeHead.call(res, _statusCode, _headers);
-              }
-          };
+                for (var i = 0; i < connections.length; i++) {
+                    connections[i].sendUTF(msg);
+                }
+            });
 
-          res.end = function () {
-              if (tmpBuffer) {
-                  var html = tmpBuffer.toString(),
-                      scriptTag = '<script src="/__reload/client.js"></script>';
+            // Todo: figure out a better way to handle this
+            app.get("/client.js", function (req, res) {
+                fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res);
+            });
+        }));
 
-                  html = html.replace('</body>', scriptTag + '</body>');
-                  _headers['content-length'] = html.length;
-                  _writeHead.call(res, _statusCode, _headers);
-                  _write.call(res, html);
-              }
-              _end.call(res);
-          };
 
-          proxy.proxyRequest(req, res);
-      };
+        // kick-off
 
-      // kick-off
+        var site = connect()
+            //.use(connect.bodyParser()) // causes issue with proxy POST
+            .use('/__reload', stub)
+            .use(proxyStub)
+            .listen(port);
 
-      var site = connect()
-          //.use(connect.bodyParser()) // causes issue with proxy POST
-          .use('/__reload', stub)
-          .use(proxyStub)
-          .listen(port);
+        var WebSocketServer = require("websocket").server;
 
-      var WebSocketServer = require("websocket").server;
+        var wsServer = new WebSocketServer({
+            httpServer:site,
+            autoAcceptConnections:true // DON'T use on production!
+        });
 
-      console.log("Reload task support enabled. Port: " + port);
+        wsServer.on('connect', function () {
+            process.stdout.write('|');//(new Date()) + ' Connection accepted. \n');
+        });
 
-      wsServer = new WebSocketServer({
-          httpServer:site,
-          autoAcceptConnections:true // DON'T use on production!
-      });
+        grunt.log.writeln("Reload task support enabled. Port: " + port);
 
-      wsServer.on('connect', function () {
-          process.stdout.write('|');//(new Date()) + ' Connection accepted. \n');
-      });
 
-  });
+    });
 
 };

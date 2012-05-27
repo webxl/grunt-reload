@@ -1,12 +1,12 @@
-/**
- * Reload Task Client script
+/*
+ * grunt-reload
+ * https://github.com/webxl/grunt-reload
  *
- * Created by webxl
- * Date: 1/11/12
- *
+ * Copyright (c) 2012 webxl
+ * Licensed under the MIT license.
  */
 
-(function() {
+(function(window) {
 
 	var reloader = function Reloader() {
 
@@ -29,7 +29,8 @@
 					this.close();
 					console.log(msg.data);
 					window.document.location.reload();
-				}
+				};
+
 				// Todo: reconnect support
 			}
 		};
@@ -38,4 +39,4 @@
 
 	setTimeout(function() { reloader.connect(); }, 3000);
 
-})();
+})(this);
