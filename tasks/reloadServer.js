@@ -27,7 +27,7 @@ module.exports = function (grunt) {
         var options = {
             target:{
                 host:grunt.config('reload.proxy.host') || 'localhost',
-                path:grunt.config('reload.proxy.path') || '/', // not yet supported by http-proxy
+                path:grunt.config('reload.proxy.path') || '/', // not yet supported by http-proxy: https://github.com/nodejitsu/node-http-proxy/pull/172
                 port:grunt.config('reload.proxy.port') || 80
             }
         };
@@ -112,7 +112,7 @@ module.exports = function (grunt) {
             process.stdout.write('|');//(new Date()) + ' Connection accepted. \n');
         });
 
-        grunt.log.writeln("Reload task support enabled. Port: " + port);
+        grunt.log.writeln("Reload task support enabled. http://localhost:" + port);
 
 
     });

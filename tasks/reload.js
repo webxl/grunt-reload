@@ -10,15 +10,13 @@ var throttle = false;
 
 module.exports = function(grunt) {
 
-  // Please see the grunt documentation for more information regarding task and
-  // helper creation: https://github.com/cowboy/grunt/blob/master/docs/toc.md
-
   // ==========================================================================
   // TASKS
   // ==========================================================================
 
   grunt.registerTask('reload', "Reload connected clients when a file has changed.", function (data, name) {
       var errorcount = grunt.fail.errorcount;
+      // throttle was needed early in development because of rapid triggering by the watch task. Not sure if it's still necessary
       if (!throttle) {
           grunt.helper('reload');
           throttle = true;

@@ -18,7 +18,7 @@ grunt.loadNpmTasks('grunt-reload');
 
 This plugin provides two grunt tasks: 'reload' and 'reloadServer'. 'reload' is designed to be called via the watch task configuration. 'reloadServer' is designed to be called on the command-line along with the watch task.
 
-The reload task tells the page to refresh itself via websocket connection between the reloadServer task
+The reload task tells the page to refresh itself via websocket connection between the reloadServer task and the reloadClient.js that is appended to the requested html file. When the watch task detects a changed file, it will process its configured tasks, which should include the 'reload' task if it is setup like the example below.
 
 Configuration:
 
@@ -30,7 +30,7 @@ Configuration:
 
 ## Example
 
-Here's how you would use grunt-reload with grunt-less:
+Here's how you would use grunt-reload with [grunt-less](https://github.com/jharding/grunt-less):
 
 ```javascript
 // project configuration
@@ -68,7 +68,8 @@ grunt.registerTask('default', 'lint less');
 * use bookmarklet or chrome extension to reload resources
 
 ## Release History
-05/26/2012 - 0.1.0: Initial release.
+05/27/2012 - 0.1.0: Initial release.
+06/3/2012 - 0.1.1: Fixes 'socket hang up' error.
 
 ## License
 Copyright (c) 2012 webxl  

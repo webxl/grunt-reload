@@ -8,7 +8,7 @@
 
 (function(window) {
 
-	var reloader = function Reloader() {
+	var reloader = (function Reloader() {
 
 		var l = window.location, url = 'ws://' + l.host;
 
@@ -35,8 +35,8 @@
 			}
 		};
 
-	}();
+	}());
 
 	setTimeout(function() { reloader.connect(); }, 3000);
 
-})(this);
+}(this));
