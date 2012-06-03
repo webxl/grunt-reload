@@ -82,6 +82,8 @@ module.exports = function (grunt) {
                 for (var i = 0; i < connections.length; i++) {
                     connections[i].sendUTF(msg);
                 }
+
+                res.end('');
             });
 
             // Todo: figure out a better way to handle this
