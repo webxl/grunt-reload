@@ -41,7 +41,7 @@ grunt.initConfig({
     reload: {
         port: 6001,
         proxy: {
-            host: 'localhost',
+            host: 'localhost'
         }
     },
     watch:{
@@ -61,15 +61,40 @@ grunt.registerTask('default', 'lint less');
 
 `grunt reloadServer watch`
 
+If you want to run a static server using the bundled server task, and enable reloading, you can configure something like this:
+
+```javascript
+...
+    reload: {
+        port: 6001,
+        proxy: {
+            host: 'localhost',
+            port: 8000 // should match to server.port config
+        }
+    },
+    watch:{
+        files:['index.html', 'style.less'],
+        tasks:'lint less reload'
+    }
+...
+grunt.registerTask('default', 'server reloadServer watch');
+```
+
+Then just run:
+
+`grunt`
 
 ## TODO
 * reload resources without refreshing entire page
-* add option to run standalone web server for project
-* use bookmarklet or chrome extension to reload resources
+* ~~add option to run standalone web server for project~~ use server task for now
+* make chrome extension to reload resources
+    * the includeReloadScript & proxy options will probably become the fallback method of attaching the client
+    * may allow one of three attach methods: extension, iframe, or proxy
 
 ## Release History
-05/27/2012 - 0.1.0: Initial release.
-06/3/2012 - 0.1.1: Fixes 'socket hang up' error.
+*   __06/04/2012 - 0.1.2__: Removed connect 1.x requirement (no longer using connect.router). Added test. Clean up.
+*   __06/03/2012 - 0.1.1__: Fixes 'socket hang up' error.
+*   __05/27/2012 - 0.1.0__: Initial release.
 
 ## License
 Copyright (c) 2012 webxl  
