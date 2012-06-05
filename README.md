@@ -22,10 +22,10 @@ The reload task tells the page to refresh itself via websocket connection betwee
 
 Configuration:
 
-* __port__: (optional, default: 8000) Reverse proxy listens on this port. This is necessary for including reload client javascript.
+* __port__: (optional, default: 8001) Reverse proxy listens on this port. This is necessary for including reload client javascript.
 * __proxy__: (required) This tells the proxy where to grab your development server's content
   * __host__: (required) development server hostname
-  * __port__: (optional, default: 80) development server port
+  * __port__: (optional, default: server.port or 80) development server port
   * __includeReloadScript__: (optional, default: true) includes the client js to listen for reload commands
 
 ## Example
@@ -87,9 +87,10 @@ Then just run:
 ## TODO
 * reload resources without refreshing entire page
 * ~~add option to run standalone web server for project~~ use server task for now
+* provide up to four different attach methods: manual script include, extension, iframe, or proxy
 * make chrome extension to reload resources
-    * the includeReloadScript & proxy options will probably become the fallback method of attaching the client
-    * may allow one of three attach methods: extension, iframe, or proxy
+    * the includeReloadScript & proxy options will probably become the primary fallback method of attaching the client
+    * might be possible to use [LiveReload Extensions](https://github.com/livereload/livereload-extensions)
 
 ## Release History
 *   __06/04/2012 - 0.1.2__: Removed connect 1.x requirement (no longer using connect.router). Added test. Clean up.
