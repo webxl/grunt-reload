@@ -69,7 +69,7 @@ If you want to run a static server using the bundled server task, and enable rel
         port: 6001,
         proxy: {
             host: 'localhost',
-            port: 8000 // should match to server.port config
+            port: 8000 // should match server.port config
         }
     },
     watch:{
