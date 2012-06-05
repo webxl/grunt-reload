@@ -22,10 +22,10 @@ The reload task tells the page to refresh itself via websocket connection betwee
 
 Configuration:
 
-* __port__: (optional, default: 8000) Reverse proxy listens on this port. This is necessary for including reload client javascript.
+* __port__: (optional, default: 8001) Reverse proxy listens on this port. This is necessary for including reload client javascript.
 * __proxy__: (required) This tells the proxy where to grab your development server's content
   * __host__: (required) development server hostname
-  * __port__: (optional, default: 80) development server port
+  * __port__: (optional, default: server.port or 80) development server port
   * __includeReloadScript__: (optional, default: true) includes the client js to listen for reload commands
 
 ## Example
@@ -92,6 +92,7 @@ Then just run:
     * may allow one of three attach methods: extension, iframe, or proxy
 
 ## Release History
+*   __TBD__ - 0.2.0: Add support for LiveReload extension
 *   __06/04/2012 - 0.1.2__: Removed connect 1.x requirement (no longer using connect.router). Added test. Clean up.
 *   __06/03/2012 - 0.1.1__: Fixes 'socket hang up' error.
 *   __05/27/2012 - 0.1.0__: Initial release.

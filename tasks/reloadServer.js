@@ -127,11 +127,25 @@ module.exports = function (grunt) {
 
         var wsServer = new WebSocketServer({
             httpServer:site,
-            autoAcceptConnections:true // DON'T use on production!
+            autoAcceptConnections:true
         });
 
-        wsServer.on('connect', function () {
-            process.stdout.write('|');//(new Date()) + ' Connection accepted. \n');
+        wsServer.on('connect', function(request) {
+
+            var connection = request; //.accept(); //.accept('*', request.origin);
+            console.log((new Date()) + ' Connection accepted.');
+            connection.on('message', function(message) {
+                if (message.type === 'utf8') {
+                    console.log('Received Message: ' + message.utf8Data);
+                    if (message.utf8Data === 'trigger') {
+                        grunt.helper('trigger', grunt.config('trigger.watchFile'));
+                        connection.sendUTF('Update triggered');
+                    }
+                }
+            });
+            connection.on('close', function(reasonCode, description) {
+                console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
+            });
         });
 
         grunt.log.writeln("For live reload, visit http://localhost:" + port);
