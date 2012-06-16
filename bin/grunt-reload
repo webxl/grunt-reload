@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('grunt').npmTasks('grunt-reload').cli();
+require('grunt').cli();

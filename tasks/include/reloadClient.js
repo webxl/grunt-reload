@@ -8,9 +8,17 @@
 
 (function(window) {
 
-	var reloader = (function Reloader() {
+    'use strict';
 
-		var l = window.location, url = 'ws://' + l.host;
+    var reloader = (function Reloader() {
+
+		var l = window.location, url;
+
+        if (window.__reloadServerUrl) {
+            url = window.__reloadServerUrl;
+        } else {
+            url = 'ws://' + l.host;
+        }
 
 		return {
 			isSocketConnected:function () {
