@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = function (grunt) {
 
     // Project configuration.
@@ -21,8 +23,14 @@ module.exports = function (grunt) {
             watchFile: 'test/trigger.html'
         },
         watch:{
-            files:['<config:lint.files>', 'test/*.html'],
-            tasks:'lint reload trigger'
+            default: {
+                files:['<config:lint.files>'],
+                tasks:'lint reload'
+            },
+            triggerTest: {
+                files:['test/trigger.html'],
+                tasks:'reload trigger'
+            }
         },
         jshint:{
             options:{
@@ -49,7 +57,7 @@ module.exports = function (grunt) {
     grunt.loadTasks('tasks');
     grunt.loadTasks('test/tasks');
 
-    // Default task.
-    grunt.registerTask('default', 'server reloadServer trigger watch');
+    grunt.registerTask('default', 'server reload watch:default');
+    grunt.registerTask('triggerTest', 'server reload watch:triggerTest');
 
 };
