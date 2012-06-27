@@ -37,7 +37,8 @@
     "websocket": "~1.0.6"
   },
   "devDependencies": {
-    "grunt": ">=0.3.9"
+    "grunt": ">=0.3.9",
+    "grunt-less": "latest"
   },
   "keywords": [
     "gruntplugin", "reload"

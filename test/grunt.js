@@ -40,15 +40,33 @@ module.exports = function (grunt) {
         trigger: {
             watchFile: 'trigger.html'
         },
+        less: {
+            style: {
+                src: 'style.less',
+                dest: 'style.css'
+            },
+            style1: {
+                src: 'style1.less',
+                dest: 'style1.css'
+            }
+        },
         watch:{
-            files:['<config:lint.files>', '*.html', 'style.css'],
-            tasks:'lint reload'
+            process: {
+                files:['<config:lint.files>', '*.html', 'style.less', 'style1.less'],
+                tasks:'less lint'
+            },
+            reload: {
+                files:['<config:lint.files>', '*.html', 'style.css', 'style1.css'],
+                tasks:'reload'
+            }
         }
     });
 
     // Load local tasks.
     grunt.loadTasks('../tasks');
     grunt.loadTasks('../test/tasks');
+
+    grunt.loadNpmTasks('grunt-less');
 
     grunt.registerTask('default', 'server reload watch');
     grunt.registerTask('liveReload', 'server reload:liveReloadTest watch');
