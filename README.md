@@ -18,7 +18,7 @@ grunt.loadNpmTasks('grunt-reload');
 
 This plugin provides the grunt task 'reload'. The 'reload' task is designed to be called via the watch task configuration and before the watch command in a custom task, such as default, in order to start the server.
 
-The reload task tells the page to refresh itself via websocket connection between the reloadServer task and the reloadClient.js that is appended to the requested html file. When the watch task detects a changed file, it will process its configured tasks, which should include the 'reload' task if it is setup like the example below.
+The reload task tells the page to refresh itself via websocket connection between the reload server and the reloadClient.js that is appended to the requested html file. When the watch task detects a changed file, it will process its configured tasks, which should include the 'reload' task if it is setup like the example below.
 
 Configuration:
 
