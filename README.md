@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/webxl/grunt-reload.png)](http://travis-ci.org/webxl/grunt-reload)
 # grunt-reload
 
 A grunt task that enables live reloading of updated watch files in the browser.
