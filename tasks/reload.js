@@ -161,7 +161,7 @@ module.exports = function (grunt) {
                 // serve iframe
                 middleware.unshift(route('GET', '/', function (req, res, next) {
                     var targetUrl = config.iframe.target;
-                    res.end('<html><body></body><iframe height=100% width=100% src="' + targetUrl + '"></iframe>' +
+                    res.end('<html><body style="margin:0;"><iframe style="border:none;" height="100%" width="100%" src="' + targetUrl + '"></iframe>' +
                         reloadClientMarkup + '</body></html>');
                 }));
             }
