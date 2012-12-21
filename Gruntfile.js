@@ -1,4 +1,4 @@
-'use strict';
+    'use strict';
 
 module.exports = function (grunt) {
 
@@ -14,22 +14,33 @@ module.exports = function (grunt) {
             all: ['http://localhost:8000/test/qunit.html']
         },
         reload: {
-            proxy: {}
+            proxy: {},
+            liveReload: {}
         },
         server: {
             port: 8000
+        },
+        connect: {
+            dev: {
+                options: {
+                    port: 8000,
+                }
+            }
         },
         trigger: {
             watchFile: 'test/trigger.html'
         },
         watch: {
+            options: {
+                interrupt: true
+            },
             'default': {
                 files: ['<config:lint.files>'],
                 tasks: 'lint reload'
             },
             triggerTest: {
                 files: ['test/trigger.html'],
-                tasks: 'reload trigger'
+                tasks: 'reload'
             }
         },
         jshint: {
@@ -53,11 +64,14 @@ module.exports = function (grunt) {
         }
     });
 
+    grunt.loadNpmTasks('grunt-contrib-connect');
+    grunt.loadNpmTasks('grunt-contrib-watch');
+
     // Load local tasks.
     grunt.loadTasks('tasks');
     grunt.loadTasks('test/tasks');
 
     grunt.registerTask('default', 'server reload watch:default');
-    grunt.registerTask('triggerTest', 'server reload watch:triggerTest');
+    grunt.registerTask('triggerTest', ['connect:dev', 'reload', 'watch:triggerTest']);
 
 };
