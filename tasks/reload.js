@@ -139,7 +139,12 @@ module.exports = function (grunt) {
                                     var html = tmpBuffer.toString();
 
                                     html = html.replace('</body>', reloadClientMarkup + '</body>');
-                                    _headers['content-length'] = html.length;
+
+                                    // since nodejs only support few charsets, we only support
+                                    // UTF-8 at this moment.
+                                    // TODO: support other charsets besides UTF-8
+                                    _headers['content-length'] = Buffer.byteLength(html, 'utf-8');
+
                                     _writeHead.call(res, _statusCode, _headers);
                                     _write.call(res, html);
                                 }
