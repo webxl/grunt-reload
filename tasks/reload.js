@@ -20,6 +20,7 @@ module.exports = function (grunt) {
     var buffers = require('buffers');
     var httpProxy = require('http-proxy');
     var WebSocketServer = require("websocket").server;
+    var request = require('request');
 
     var throttle = false;
     // support for multiple reload servers
@@ -52,10 +53,8 @@ module.exports = function (grunt) {
         };
     }
 
-    grunt.registerTask('reload', "Reload connected clients when a file has changed.", function (target) {
-
+    function startServer(target) {
         var server = servers[target ? target:'default'];
-
         if (server) {
             var errorcount = grunt.fail.errorcount;
             // throttle was needed early in development because of rapid triggering by the watch task. Not sure if it's still necessary
@@ -184,6 +183,12 @@ module.exports = function (grunt) {
                 fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res); // use connect.static.send ?
             }));
 
+            // route to trigger reload
+            middleware.unshift(route('GET', '/triggerReload', function (req, res, next) {
+                taskEvent.emit('reload');
+                res.end("reload triggered");
+            }));
+
             // if --debug was specified, enable logging.
             if (grunt.option('debug')) {
                 connect.logger.format('grunt', ('[D] reloadServer :method :url :status ' +
@@ -246,7 +251,29 @@ module.exports = function (grunt) {
             }
 
             grunt.log.writeln("reload server running at http://localhost:" + port);
-
         }
+
+    };
+
+    grunt.registerTask('reload', "Reload connected clients when a file has changed.", function (target) {
+        var done = this.async();
+        var that = this;
+        this.requiresConfig('reload');
+
+        // Get values from config, or use defaults.
+        var config = target ? grunt.config(['reload', target]) : grunt.config('reload');
+        var port = config.port || 8001;
+        // First, try to trigger reload in already running server process
+        request('http://localhost:'+port+'/triggerReload', function (error, response, body) {
+            if (!error && response.statusCode == 200) {
+                // Reload was triggered successfully
+                grunt.log.writeln("Triggered reload in running reload-server");
+            } else {
+                // Server doesn't seem to be running, start our own
+                startServer.call(that,target);
+            }
+            done();
+        });
+
     });
 };
