@@ -10,12 +10,18 @@
 
 module.exports = function (grunt) {
 
+    // can be called from client via reloadServer
+    var trigger = function (path) {
+        var html = grunt.file.read(path).replace(/<h1>(.*)<\/h1>/, '<h1>' + new Date() + '</h1>');
+        grunt.file.write(path, html);
+    };
+
     grunt.registerTask('trigger', 'Write timestamp to html file in order to trigger watch task.', function (data, name) {
         var errorcount = grunt.fail.errorcount;
         var updatedFile = grunt.config('trigger.watchFile');
 
         setTimeout(function () {
-            grunt.helper('trigger', updatedFile);
+            trigger('updatedFile');
         }, 5000);
 
         grunt.log.writeln("Trigger task triggered. Writing to " + updatedFile + ' ');
@@ -26,10 +32,5 @@ module.exports = function (grunt) {
         }
     });
 
-    // can be called from client via reloadServer
-    grunt.registerHelper('trigger', function (path) {
-        var html = grunt.file.read(path).replace(/<h1>(.*)<\/h1>/, '<h1>' + new Date() + '</h1>');
-        grunt.file.write(path, html);
-    });
 
 };
