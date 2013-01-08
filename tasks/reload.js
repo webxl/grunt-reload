@@ -183,9 +183,10 @@ module.exports = function (grunt) {
                 fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res); // use connect.static.send ?
             }));
 
+            // route to trigger reload
             middleware.unshift(route('GET', '/triggerReload', function (req, res, next) {
                 taskEvent.emit('reload');
-                res.end("triggered");
+                res.end("reload triggered");
             }));
 
             // if --debug was specified, enable logging.
@@ -262,6 +263,7 @@ module.exports = function (grunt) {
         // Get values from config, or use defaults.
         var config = target ? grunt.config(['reload', target]) : grunt.config('reload');
         var port = config.port || 8001;
+        // First, try to trigger reload in already running server process
         request('http://localhost:'+port+'/triggerReload', function (error, response, body) {
             if (!error && response.statusCode == 200) {
                 // Reload was triggered successfully
