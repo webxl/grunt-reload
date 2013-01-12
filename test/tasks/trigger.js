@@ -17,12 +17,21 @@ module.exports = function (grunt) {
     };
 
     grunt.registerTask('trigger', 'Write timestamp to html file in order to trigger watch task.', function (data, name) {
+
         var errorcount = grunt.fail.errorcount;
         var updatedFile = grunt.config('trigger.watchFile');
 
-        setTimeout(function () {
-            trigger('updatedFile');
-        }, 5000);
+
+        grunt.event.on('trigger', function (connection) {
+
+
+            setTimeout(function () {
+                trigger(updatedFile);
+            }, 5000);
+
+            connection.sendUTF('Update triggered');
+        });
+
 
         grunt.log.writeln("Trigger task triggered. Writing to " + updatedFile + ' ');
 

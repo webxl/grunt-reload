@@ -10,20 +10,14 @@ module.exports = function (grunt) {
         lint: {
             files: ['grunt.js', 'tasks/**/*.js', 'test/**/*.js']
         },
-        qunit: {
-            all: ['http://localhost:8000/test/qunit.html']
-        },
         reload: {
             proxy: {},
             liveReload: {}
         },
-        server: {
-            port: 8000
-        },
         connect: {
-            dev: {
+            default: {
                 options: {
-                    port: 8000,
+                    port: 8000
                 }
             }
         },
@@ -71,7 +65,7 @@ module.exports = function (grunt) {
     grunt.loadTasks('tasks');
     grunt.loadTasks('test/tasks');
 
-    grunt.registerTask('default', 'server reload watch:default');
-    grunt.registerTask('triggerTest', ['connect:dev', 'reload', 'watch:triggerTest']);
+    grunt.registerTask('default', ['connect', 'reload', 'watch:default']);
+    grunt.registerTask('triggerTest', ['connect', 'reload', 'watch:triggerTest']);
 
 };

@@ -19,7 +19,7 @@
 <script type="text/javascript">
 
     (function() {
-
+        return;
         var l = window.location, url = 'ws://' + l.host;
         var socket = new WebSocket(url);
 
@@ -31,6 +31,7 @@
 
         socket.onmessage = function (msg) {
             console.log(msg.data);
+            window.document.location.reload();
         };
     }());
 

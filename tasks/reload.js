@@ -22,16 +22,12 @@ module.exports = function (grunt) {
     var WebSocketServer = require("websocket").server;
     var request = require('request');
 
-    var throttle = false;
-    // support for multiple reload servers
-    var servers = {};
-
-    function handleReload(wsServer, target) {
+    function handleReload(wsServer, files, target) {
         var connections = wsServer.connections;
-        var path = grunt.file.watchFiles ? grunt.file.watchFiles.changed[0] : 'index.html';
+        var path = files ? files.changed[0] : 'index.html';
 
         // apply_js_live
-        var msg = '["refresh", {"path": "' + path + '", "target": "' + target + '"}]';
+        var msg = '{"command": "reload", "path": "' + path + '", "target": "' + target + '"}';
 
         for (var i = 0; i < connections.length; i++) {
             connections[i].sendUTF(msg);
@@ -54,205 +50,185 @@ module.exports = function (grunt) {
     }
 
     function startServer(target) {
-        var server = servers[target ? target:'default'];
-        if (server) {
-            var errorcount = grunt.fail.errorcount;
-            // throttle was needed early in development because of rapid triggering by the watch task. Not sure if it's still necessary
-            if (!throttle) {
-                if (target) {
-                    taskEvent.emit('reload:' + target);
-                } else {
-                    taskEvent.emit('reload');
-                }
 
-                throttle = true;
-                setTimeout(function () {
-                    throttle = false;
-                }, 2000);
-                grunt.log.writeln("File updated. Reload triggered.");
-            } else {
-                return;
-            }
-            // Fail task if there were errors.
-            if (grunt.fail.errorcount > errorcount) {
-                return false;
-            }
-        } else {
-            // start a server that can send a reload command over a websocket connection.
+        // start a server that can send a reload command over a websocket connection as well as proxy to another server
+        // and inject reload scripts.
 
-            var middleware = [];
+        var middleware = [];
 
-            this.requiresConfig('reload');
+        this.requiresConfig('reload');
 
-            // Get values from config, or use defaults.
-            var config = target ? grunt.config(['reload', target]) : grunt.config('reload');
-            var port = config.port || 8001;
-            var base = path.resolve(grunt.config('server.base') || '.');
-            var reloadClientMarkup = '<script src="/__reload/client.js"></script>';
+        // Get values from config, or use defaults.
+        var config = target ? grunt.config(['reload', target]) : grunt.config('reload');
+        var port = config.port || 8001;
+        var base = path.resolve(grunt.config('server.base') || '.');
+        var reloadClientMarkup = '<script src="/__reload/client.js"></script>';
 
-            if (!target) {
-                target = 'default';
-            }
-
-            if (config.proxy) {
-                var proxyConfig = config.proxy;
-                var options = {
-                    target:{
-                        host:proxyConfig.host || 'localhost',
-                        port:proxyConfig.port || grunt.config('server.port') || 80,
-                        path:proxyConfig.path || '/' // not yet supported by http-proxy: https://github.com/nodejitsu/node-http-proxy/pull/172
-                    }
-                };
-                var proxy = new httpProxy.HttpProxy(options);
-                var targetUrl = 'http://' + options.target.host + ':' + options.target.port + options.target.path;
-
-                // modify any proxied HTML requests to include the client script
-                middleware.unshift(connect(
-                    function (req, res) {
-
-                        if (proxyConfig.includeReloadScript !== false) {
-                            // monkey patch response, postpone header
-                            var _write = res.write, _writeHead = res.writeHead, _end = res.end, _statusCode, _headers, tmpBuffer;
-
-                            res.write = function (data) {
-                                if (tmpBuffer) {
-                                    tmpBuffer.push(data);
-                                } else {
-                                    _write.call(res, data);
-                                }
-                            };
-
-                            res.writeHead = function (statusCode, headers) {
-                                _statusCode = statusCode;
-                                _headers = headers;
-                                if (/html/.test(_headers["content-type"])) {
-                                    // defer html & headers
-                                    tmpBuffer = buffers();
-                                } else {
-                                    _writeHead.call(res, _statusCode, _headers);
-                                }
-                            };
-
-                            res.end = function () {
-                                if (tmpBuffer) {
-                                    var html = tmpBuffer.toString();
-
-                                    html = html.replace('</body>', reloadClientMarkup + '</body>');
-
-                                    // since nodejs only support few charsets, we only support
-                                    // UTF-8 at this moment.
-                                    // TODO: support other charsets besides UTF-8
-                                    _headers['content-length'] = Buffer.byteLength(html, 'utf-8');
-
-                                    _writeHead.call(res, _statusCode, _headers);
-                                    _write.call(res, html);
-                                }
-                                _end.call(res);
-                            };
-                        }
-
-                        proxy.proxyRequest(req, res);
-                    }
-                ));
-
-                grunt.log.writeln("Proxying " + targetUrl);
-
-            } else {
-                middleware.unshift(connect.static(base, { redirect:true }));
-            }
-
-            if (config.iframe) {
-                // serve iframe
-                middleware.unshift(route('GET', '/', function (req, res, next) {
-                    var targetUrl = config.iframe.target;
-                    res.end('<html><body style="margin:0;"><iframe style="border:none;" height="100%" width="100%" src="' + targetUrl + '"></iframe>' +
-                        reloadClientMarkup + '</body></html>');
-                }));
-            }
-
-            if (config.liveReload) {
-                // required by LR 2.x
-                middleware.unshift(route('GET', /\/livereload.js(\?.*)?/, function (req, res, next) {
-                    res.write('__reloadServerUrl="ws://localhost:' + config.port + '";\n');
-                    fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res);
-                }));
-            }
-
-            // provide route to client js
-            middleware.unshift(route('GET', '/__reload/client.js', function (req, res, next) {
-                fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res); // use connect.static.send ?
-            }));
-
-            // route to trigger reload
-            middleware.unshift(route('GET', '/triggerReload', function (req, res, next) {
-                taskEvent.emit('reload');
-                res.end("reload triggered");
-            }));
-
-            // if --debug was specified, enable logging.
-            if (grunt.option('debug')) {
-                connect.logger.format('grunt', ('[D] reloadServer :method :url :status ' +
-                    ':res[content-length] - :response-time ms').blue);
-                middleware.unshift(connect.logger('grunt'));
-            }
-
-            // kick-off
-            server = connect.apply(null, middleware).listen(port);
-
-            servers[target] = server;
-
-            if (!servers.default) {
-                servers.default = server;
-            }
-
-            var wsServer = new WebSocketServer({
-                httpServer:server,
-                autoAcceptConnections:true
-            });
-
-            wsServer.on('connect', function (request) {
-
-                var connection = request; //.accept(); //.accept('*', request.origin);
-                console.log((new Date()) + ' Connection accepted.');
-                connection.on('message', function (message) {
-                    if (message.type === 'utf8') {
-                        console.log('Received Message: ' + message.utf8Data);
-                        if (message.utf8Data === 'trigger') {
-                            grunt.helper('trigger', grunt.config('trigger.watchFile'));
-                            connection.sendUTF('Update triggered');
-                        }
-                        // LiveReload support
-                        if (message.utf8Data.match(/^http:\/\//)) {
-                            connection.sendUTF("!!ver:1.6;");
-                        }
-                        if (message.utf8Data.match(/{.*/)) {
-                            var handshake = "{ command: 'hello', protocols: [ " +
-                                "'http://livereload.com/protocols/official-7', " +
-                                "'http://livereload.com/protocols/2.x-origin-version-negotiation', " +
-                                "'http://livereload.com/protocols/2.x-remote-control'" +
-                                "], serverName: 'grunt-reload', }";
-                            connection.sendUTF(handshake);
-                        }
-                    }
-                });
-                connection.on('close', function (reasonCode, description) {
-                    console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
-                });
-            });
-
-            taskEvent.on('reload', function() {
-                handleReload(wsServer);
-            });
-
-            if (target) {
-                taskEvent.on('reload:' + target, function() {
-                    handleReload(wsServer, target);
-                });
-            }
-
-            grunt.log.writeln("reload server running at http://localhost:" + port);
+        if (!target) {
+            target = 'default';
         }
 
+        if (config.proxy) {
+            var proxyConfig = config.proxy;
+            var proxyOpts = {
+                target:{
+                    host:proxyConfig.host || 'localhost',
+                    port:proxyConfig.port || grunt.config(['connect', target]).options.port || 80,
+                    path:proxyConfig.path || '/'
+                }
+            };
+            var proxy = new httpProxy.HttpProxy(proxyOpts);
+            var targetUrl = 'http://' + proxyOpts.target.host + ':' + proxyOpts.target.port + proxyOpts.target.path;
+
+            // modify any proxied HTML requests to include the client script
+            middleware.unshift(connect(
+                function (req, res) {
+
+                    if (proxyConfig.includeReloadScript !== false) {
+                        // monkey patch response, postpone header
+                        var _write = res.write, _writeHead = res.writeHead, _end = res.end,
+                            _statusCode, _headers, tmpBuffer;
+
+                        res.write = function (data) {
+                            if (tmpBuffer) {
+                                tmpBuffer.push(data);
+                            } else {
+                                _write.call(res, data);
+                            }
+                        };
+
+                        res.writeHead = function (statusCode, headers) {
+                            _statusCode = statusCode;
+                            _headers = headers;
+                            if (/html/.test(_headers["content-type"])) {
+                                // defer html & headers
+                                tmpBuffer = buffers();
+                            } else {
+                                _writeHead.call(res, _statusCode, _headers);
+                            }
+                        };
+
+                        res.end = function () {
+                            if (tmpBuffer) {
+                                var html = tmpBuffer.toString();
+
+                                html = html.replace('</body>', reloadClientMarkup + '</body>');
+
+                                // since nodejs only support few charsets, we only support
+                                // UTF-8 at this moment.
+                                // TODO: support other charsets besides UTF-8
+                                _headers['content-length'] = Buffer.byteLength(html, 'utf-8');
+
+                                _writeHead.call(res, _statusCode, _headers);
+                                _write.call(res, html);
+                            }
+                            _end.call(res);
+                        };
+                    }
+
+                    proxy.proxyRequest(req, res);
+                }
+            ));
+
+            grunt.log.writeln("Proxying " + targetUrl);
+
+        } else {
+            middleware.unshift(connect.static(base, { redirect:true }));
+        }
+
+        if (config.iframe) {
+            // serve iframe
+            middleware.unshift(route('GET', '/', function (req, res, next) {
+                var targetUrl = config.iframe.target;
+                res.end('<html><body style="margin:0;">' +
+                    '<iframe style="border:none;" height="100%" width="100%" src="' + targetUrl + '"></iframe>' +
+                    reloadClientMarkup + '</body></html>');
+            }));
+        }
+
+        if (config.liveReload) {
+            // required by LR 2.x
+            middleware.unshift(route('GET', /\/livereload.js(\?.*)?/, function (req, res, next) {
+                res.write('__reloadServerUrl="ws://localhost:' + config.port + '";\n');
+                fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res);
+            }));
+        }
+
+        // provide route to client js
+        middleware.unshift(route('GET', '/__reload/client.js', function (req, res, next) {
+            fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res); // use connect.static.send ?
+        }));
+
+        // route to trigger reload
+        middleware.unshift(route('POST', '/triggerReload', function (req, res, next) {
+            taskEvent.emit('reload', req.body.files, req.body.target);
+            res.end("reload triggered");
+        }));
+
+        // if --debug was specified, enable logging.
+        if (grunt.option('debug')) {
+            connect.logger.format('grunt', ('[D] reloadServer :method :url :status ' +
+                ':res[content-length] - :response-time ms').blue);
+            middleware.unshift(connect.logger('grunt'));
+        }
+
+        middleware.unshift(connect.bodyParser());
+
+        // kick-off
+        var server = connect.apply(null, middleware).listen(port);
+
+        var wsServer = new WebSocketServer({
+            httpServer:server,
+            autoAcceptConnections:true
+        });
+
+        wsServer.on('connect', function (request) {
+
+            var connection = request; //.accept(); //.accept('*', request.origin);
+            console.log((new Date()) + ' Connection accepted.');
+            connection.on('message', function (message) {
+                if (message.type === 'utf8') {
+                    console.log('Received Message: ' + message.utf8Data);
+                    if (message.utf8Data === 'trigger') {
+                        grunt.event.emit('trigger', connection);
+                    }
+                    // LiveReload support
+                    if (message.utf8Data.match(/^http:\/\//)) {
+                        return connection.sendUTF("!!ver:1.6;");
+                    }
+                    var data = JSON.parse(message.utf8Data);
+
+                    if (data.command === 'hello') {
+                        var handshake = {
+                            command: 'hello',
+                            protocols: [ 'http://livereload.com/protocols/official-7'],
+                            serverName: 'grunt-reload'
+                        };
+                        return connection.sendUTF(JSON.stringify(handshake));
+                    }
+                    if (data.command === 'hello') {
+                        var handshake = {
+                            command:'hello',
+                            protocols:[ 'http://livereload.com/protocols/official-7'],
+                            serverName:'grunt-reload'
+                        };
+                        return connection.sendUTF(JSON.stringify(handshake));
+                    }
+                    if (data.command === 'hello') {
+                        return;
+                    }
+                }
+            });
+            connection.on('close', function (reasonCode, description) {
+                console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
+            });
+        });
+
+        taskEvent.on('reload', function (files, target) {
+            handleReload(wsServer, files, target);
+        });
+
+        grunt.log.writeln("reload server running at http://localhost:" + port);
     };
 
     grunt.registerTask('reload', "Reload connected clients when a file has changed.", function (target) {
@@ -264,16 +240,25 @@ module.exports = function (grunt) {
         var config = target ? grunt.config(['reload', target]) : grunt.config('reload');
         var port = config.port || 8001;
         // First, try to trigger reload in already running server process
-        request('http://localhost:'+port+'/triggerReload', function (error, response, body) {
-            if (!error && response.statusCode == 200) {
-                // Reload was triggered successfully
-                grunt.log.writeln("Triggered reload in running reload-server");
-            } else {
-                // Server doesn't seem to be running, start our own
-                startServer.call(that,target);
+        request.post(
+            {
+                url:'http://localhost:' + port + '/triggerReload',
+                json:{
+                    files:grunt.file.watchFiles,
+                    target:target
+                }
+            },
+            function (error, response) {
+                if (!error && response.statusCode == 200) {
+                    // Reload was triggered successfully
+                    grunt.log.writeln("Triggered reload in running reload-server");
+                } else {
+                    // Server doesn't seem to be running, start our own
+                    startServer.call(that, target);
+                }
+                done();
             }
-            done();
-        });
+        );
 
     });
 };

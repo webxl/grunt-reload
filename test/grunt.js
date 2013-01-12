@@ -1,7 +1,7 @@
 module.exports = function (grunt) {
 
     grunt.initConfig({
-        lint:{
+        jshint:{
             files:['grunt.js', 'main.js']
         },
         reload: {
@@ -34,30 +34,40 @@ module.exports = function (grunt) {
                 proxy: {}
             }
         },
-        server:{
-            port:9999
+        connect:{
+            default:{
+                options:{
+                    port:9999
+                }
+            }
         },
         trigger: {
             watchFile: 'trigger.html'
         },
         less: {
             style: {
-                src: 'style.less',
-                dest: 'style.css'
+                files: {
+                    'style.css': 'style.less'
+                }
             },
             style1: {
-                src: 'style1.less',
-                dest: 'style1.css'
+                files: {
+                    'style1.css': 'style1.less'
+                }
             }
         },
         watch:{
-            process: {
+            'default':{
                 files:['<config:lint.files>', '*.html', 'style.less', 'style1.less'],
-                tasks:'less lint'
+                tasks:['less', 'reload'],
+                options:{
+                    interrupt:true,
+                    debounceDelay:250
+                }
             },
-            reload: {
-                files:['<config:lint.files>', '*.html', 'style.css', 'style1.css'],
-                tasks:'reload'
+            liveReloadTest: {
+                files:['<config:lint.files>', '*.html', 'style.less', 'style1.less'],
+                tasks:['less', 'reload:liveReloadTest']
             }
         }
     });
@@ -66,12 +76,15 @@ module.exports = function (grunt) {
     grunt.loadTasks('../tasks');
     grunt.loadTasks('../test/tasks');
 
-    grunt.loadNpmTasks('grunt-less');
+    grunt.loadNpmTasks('grunt-contrib-watch');
+    grunt.loadNpmTasks('grunt-contrib-connect');
+    grunt.loadNpmTasks('grunt-contrib-less');
+    grunt.loadNpmTasks('grunt-contrib-jshint');
 
-    grunt.registerTask('default', 'server reload watch');
-    grunt.registerTask('liveReload', 'server reload:liveReloadTest watch');
-    grunt.registerTask('proxyOnly', 'server reload:proxyOnlyTest watch');
-    grunt.registerTask('serverProxy', 'server reload:serverProxyTest watch');
-    grunt.registerTask('iframe', 'server reload:iframeTest watch');
+    grunt.registerTask('default', ['connect', 'reload', 'trigger', 'watch:default']);
+    grunt.registerTask('liveReload', ['connect', 'reload:liveReloadTest', 'watch:liveReloadTest']);
+    grunt.registerTask('proxyOnly', ['connect', 'reload:proxyOnlyTest', 'watch']);
+    grunt.registerTask('connectProxy', ['connect', 'reload:serverProxyTest', 'watch']);
+    grunt.registerTask('iframe', ['connect', 'reload:iframeTest', 'watch']);
 
 };

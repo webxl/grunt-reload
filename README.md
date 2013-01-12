@@ -14,6 +14,8 @@ grunt.loadNpmTasks('grunt-reload');
 [grunt]: https://github.com/cowboy/grunt
 [getting_started]: https://github.com/cowboy/grunt/blob/master/docs/getting_started.md
 
+Version 0.4.x of this plugin is compatible with Grunt 0.4.x. Version 0.2.0 is compatible with Grunt 0.3.x.
+
 ## Documentation
 
 This plugin provides the grunt task 'reload'. The 'reload' task is designed to be called via the watch task configuration and before the watch command in a custom task, such as default, in order to start the server.
@@ -40,7 +42,7 @@ This will automatically append the script to a requested HTML file. Here's how y
 ```javascript
 // project configuration
 grunt.initConfig({
-    lint: {
+    jshint: {
         all:['js/*.js']
     },
     reload: {
@@ -51,21 +53,21 @@ grunt.initConfig({
     },
     less: {
         style: {
-            src: 'style.less',
-            dest: 'style.css'
+            'style.css': 'style.less'
         }
     },
     watch:{
         files:['index.html', 'style.less'],
-        tasks:'default less reload'
+        tasks:['less', 'reload']
     }
 
 });
 
-grunt.loadNpmTasks('grunt-less');
+grunt.loadNpmTasks('grunt-contrib-less');
+grunt.loadNpmTasks('grunt-contrib-jshint');
 grunt.loadNpmTasks('grunt-reload');
 
-grunt.registerTask('default', 'lint less');
+grunt.registerTask('default', ['jshint', 'less']);
 ```
 
 The reload server would listen at http://localhost:6001 and forward to requests to http://localhost.
@@ -127,10 +129,10 @@ If you want to run a static server using the bundled server task, and enable rel
     },
     watch:{
         files:['index.html', 'style.less'],
-        tasks:'lint less reload'
+        tasks:['less', 'reload']
     }
 ...
-grunt.registerTask('default', 'server reload watch');
+grunt.registerTask('default', ['connect', 'reload', 'watch']);
 ```
 
 In this case, you can just run the default task:
@@ -139,14 +141,15 @@ In this case, you can just run the default task:
 
 
 ## TODO
-* ~~reload resources without refreshing entire page~~ use [LiveReload extensions](http://help.livereload.com/kb/general-use/browser-extensions) and grunt 0.4 alpha
+* ~~reload resources without refreshing entire page~~ use [LiveReload extensions](http://help.livereload.com/kb/general-use/browser-extensions) and grunt 0.4
 * ~~add option to run standalone web server for project~~ use server task for now
 * write chrome extension to reload resources (css, images, templates)
     * the includeReloadScript & proxy options will probably become the fallback method of attaching the client
     * may allow one of three attach methods: extension, iframe, or proxy
 
 ## Release History
-*   __06/15/2012 - 0.2.0__: Added support for grunt 0.4, [LiveReload extensions](http://help.livereload.com/kb/general-use/browser-extensions), iframes, and custom targets
+*   __01/11/2013 - 0.4.0__: Really added support for grunt 0.4 (rc4) and contrib plugins
+*   __06/15/2012 - 0.2.0__: ~~Added support for grunt 0.4~~ [LiveReload extensions](http://help.livereload.com/kb/general-use/browser-extensions), iframes, and custom targets
 *   __06/04/2012 - 0.1.2__: Removed connect 1.x requirement (no longer using connect.router). Added test. Clean up.
 *   __06/03/2012 - 0.1.1__: Fixes 'socket hang up' error.
 *   __05/27/2012 - 0.1.0__: Initial release.
