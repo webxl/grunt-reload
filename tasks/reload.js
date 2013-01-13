@@ -200,14 +200,6 @@ module.exports = function (grunt) {
 
                     if (data.command === 'hello') {
                         var handshake = {
-                            command: 'hello',
-                            protocols: [ 'http://livereload.com/protocols/official-7'],
-                            serverName: 'grunt-reload'
-                        };
-                        return connection.sendUTF(JSON.stringify(handshake));
-                    }
-                    if (data.command === 'hello') {
-                        var handshake = {
                             command:'hello',
                             protocols:[ 'http://livereload.com/protocols/official-7'],
                             serverName:'grunt-reload'
