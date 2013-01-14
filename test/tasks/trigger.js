@@ -4,13 +4,16 @@
  *
  * Copyright (c) 2012 webxl
  * Licensed under the MIT license.
+ *
+ * The trigger task is used to modify a file on the server, from the test/index.html file
+ *
  */
 
 'use strict';
 
 module.exports = function (grunt) {
 
-    // can be called from client via reloadServer
+    // can be called from client via reload task
     var trigger = function (path) {
         var html = grunt.file.read(path).replace(/<h1>(.*)<\/h1>/, '<h1>' + new Date() + '</h1>');
         grunt.file.write(path, html);
@@ -20,16 +23,20 @@ module.exports = function (grunt) {
         var errorcount = grunt.fail.errorcount;
         var updatedFile = grunt.config('trigger.watchFile');
 
-        grunt.event.on('trigger', function (connection) {
+        grunt.event.on('reload:trigger', function (connection) {
 
+            var updateTimeout = 2000;
             setTimeout(function () {
+                grunt.log.writeln("Trigger task writing to " + updatedFile + ' ');
                 trigger(updatedFile);
-            }, 5000);
+            }, updateTimeout);
 
-            connection.sendUTF('Update triggered');
+            var msg = 'Trigger task triggered. Delaying ' + updateTimeout + 'ms.';
+
+            grunt.log.writeln(msg);
+            connection.sendUTF(msg);
+
         });
-
-        grunt.log.writeln("Trigger task triggered. Writing to " + updatedFile + ' ');
 
         // Fail task if there were errors.
         if (grunt.fail.errorcount > errorcount) {

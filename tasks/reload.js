@@ -6,9 +6,9 @@
  * Licensed under the MIT license.
  */
 
-'use strict';
-
 module.exports = function (grunt) {
+
+    'use strict';
 
     // node libs
     var path = require('path');
@@ -56,11 +56,11 @@ module.exports = function (grunt) {
 
         var middleware = [];
 
-        this.requiresConfig('reload');
+        grunt.config.requires('reload');
 
         // Get values from config, or use defaults.
         var config = target ? grunt.config(['reload', target]) : grunt.config('reload');
-        var port = config.port || 8001;
+        var port = config.port || grunt.config('reload').port || 8001;
         var base = path.resolve(grunt.config('server.base') || '.');
         var reloadClientMarkup = '<script src="/__reload/client.js"></script>';
 
@@ -70,10 +70,11 @@ module.exports = function (grunt) {
 
         if (config.proxy) {
             var proxyConfig = config.proxy;
+            var connectOpts = grunt.config(['connect', target]).options;
             var proxyOpts = {
                 target:{
                     host:proxyConfig.host || 'localhost',
-                    port:proxyConfig.port || grunt.config(['connect', target]).options.port || 80,
+                    port:proxyConfig.port || connectOpts && connectOpts.port || 80,
                     path:proxyConfig.path || '/'
                 }
             };
@@ -150,12 +151,13 @@ module.exports = function (grunt) {
             // required by LR 2.x
             middleware.unshift(route('GET', /\/livereload.js(\?.*)?/, function (req, res, next) {
                 res.write('__reloadServerUrl="ws://localhost:' + config.port + '";\n');
-                fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res);
+                fs.createReadStream(__dirname + "/include/livereload.js").pipe(res);
             }));
         }
 
         // provide route to client js
         middleware.unshift(route('GET', '/__reload/client.js', function (req, res, next) {
+            res.setHeader('content-type', 'application/javascript');
             fs.createReadStream(__dirname + "/include/reloadClient.js").pipe(res); // use connect.static.send ?
         }));
 
@@ -188,16 +190,14 @@ module.exports = function (grunt) {
             console.log((new Date()) + ' Connection accepted.');
             connection.on('message', function (message) {
                 if (message.type === 'utf8') {
-                    console.log('Received Message: ' + message.utf8Data);
-                    if (message.utf8Data === 'trigger') {
-                        grunt.event.emit('trigger', connection);
-                    }
-                    // LiveReload support
-                    if (message.utf8Data.match(/^http:\/\//)) {
-                        return connection.sendUTF("!!ver:1.6;");
-                    }
+
                     var data = JSON.parse(message.utf8Data);
 
+                    if (data.command) {
+                        grunt.event.emit('reload:' + data.command, connection);
+                    }
+
+                    // LiveReload support
                     if (data.command === 'hello') {
                         var handshake = {
                             command:'hello',
@@ -220,28 +220,34 @@ module.exports = function (grunt) {
             handleReload(wsServer, files, target);
         });
 
-        grunt.log.writeln("reload server running at http://localhost:" + port);
-    };
+        grunt.log.writeln("Reload server running at http://localhost:" + port);
+
+    }
 
     grunt.registerTask('reload', "Reload connected clients when a file has changed.", function (target) {
+
         var done = this.async();
         var that = this;
-        this.requiresConfig('reload');
+        grunt.config.requires('reload');
 
         // Get values from config, or use defaults.
         var config = target ? grunt.config(['reload', target]) : grunt.config('reload');
-        var port = config.port || 8001;
+        var port = config.port || grunt.config('reload').port || 8001;
+
         // First, try to trigger reload in already running server process
+        var triggerUrl = 'http://localhost:' + port + '/triggerReload';
+        console.log('Attempting reload at ' + triggerUrl);
+
         request.post(
             {
-                url:'http://localhost:' + port + '/triggerReload',
+                url:triggerUrl,
                 json:{
                     files:grunt.file.watchFiles,
                     target:target
                 }
             },
             function (error, response) {
-                if (!error && response.statusCode == 200) {
+                if (!error && response.statusCode === 200) {
                     // Reload was triggered successfully
                     grunt.log.writeln("Triggered reload in running reload-server");
                 } else {

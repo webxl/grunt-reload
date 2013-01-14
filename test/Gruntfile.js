@@ -6,6 +6,7 @@ module.exports = function (grunt) {
         },
         reload: {
             port: 10000,
+            includeReloadScript: true,
             // test targets
             iframeTest: {
                 port: 7001,
@@ -29,13 +30,18 @@ module.exports = function (grunt) {
                     includeReloadScript: false
                 }
             },
-            serverProxyTest: {
-                // default 8001 -> server.port 9999
+            connectProxyTest: {
+                // parent 10000 -> connect port 9999
                 proxy: {}
             }
         },
         connect:{
             default:{
+                options:{
+                    port:9999
+                }
+            },
+            connectProxyTest:{
                 options:{
                     port:9999
                 }
@@ -67,7 +73,7 @@ module.exports = function (grunt) {
             },
             liveReloadTest: {
                 files:['<config:lint.files>', '*.html', 'style.less', 'style1.less'],
-                tasks:['less', 'jshint', 'reload:liveReloadTest']
+                tasks:['less', 'reload:liveReloadTest']
             }
         }
     });
@@ -81,10 +87,10 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-less');
     grunt.loadNpmTasks('grunt-contrib-jshint');
 
-    grunt.registerTask('default', ['connect', 'reload', 'trigger', 'watch:default']);
-    grunt.registerTask('liveReload', ['connect', 'reload:liveReloadTest', 'watch:liveReloadTest']);
-    grunt.registerTask('proxyOnly', ['connect', 'reload:proxyOnlyTest', 'watch']);
-    grunt.registerTask('connectProxy', ['connect', 'reload:serverProxyTest', 'watch']);
-    grunt.registerTask('iframe', ['connect', 'reload:iframeTest', 'watch']);
+    grunt.registerTask('default', ['connect:connectProxyTest', 'reload:connectProxyTest', 'trigger', 'watch:default']);
+    grunt.registerTask('liveReload', ['connect:default', 'reload:liveReloadTest', 'watch:liveReloadTest']);
+    grunt.registerTask('noProxy', ['connect:default', 'reload', 'trigger', 'watch:default']);
+    grunt.registerTask('iframe', ['connect:default', 'reload:iframeTest', 'watch:default']);
+    grunt.registerTask('proxyOnly', ['connect:default', 'reload:proxyOnlyTest', 'watch:default']);
 
 };

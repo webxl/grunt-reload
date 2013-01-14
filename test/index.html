@@ -10,7 +10,7 @@
 
 <h2>Reload Test</h2>
 <p>
-    <input type="button" id="trigger" value="Trigger Update">
+    <input type="button" id="trigger" value="Trigger Update"> (2 second delay; must use test/trigger task)
 </p>
 <div>
   I am a &lt;div&gt;!
@@ -19,20 +19,29 @@
 <script type="text/javascript">
 
     (function() {
-        return;
-        var l = window.location, url = 'ws://' + l.host;
-        var socket = new WebSocket(url);
 
-        var button = document.getElementById('trigger');
+        function fallbackReloader() {
+            var l = window.location, url = 'ws://' + l.host;
+            var socket = new WebSocket(url);
+            var button = document.getElementById('trigger');
+            console.log('connecting to dev server');
+            button.addEventListener('click', function (e) {
+                socket.send('{ "command": "trigger" }');
+            }, false);
+            socket.onmessage = function (msg) {
+                console.log(msg.data);
+                try {
+                    var data = JSON.parse(msg.data);
+                    if (data.command == 'reload') {
+                        window.document.location.reload();
+                    }
+                } catch (e) {
+                }
+            };
+        }
 
-        button.addEventListener('click', function(e) {
-            socket.send('trigger');
-        }, false);
+        //fallbackReloader();
 
-        socket.onmessage = function (msg) {
-            console.log(msg.data);
-            window.document.location.reload();
-        };
     }());
 
 </script>
