@@ -70,7 +70,8 @@ module.exports = function (grunt) {
 
         if (config.proxy) {
             var proxyConfig = config.proxy;
-            var connectOpts = grunt.config(['connect', target]).options;
+            var connectConfig = grunt.config(['connect', target]);
+            var connectOpts = connectConfig && connectConfig.options;
             var proxyOpts = {
                 target:{
                     host:proxyConfig.host || 'localhost',
