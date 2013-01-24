@@ -20,7 +20,8 @@ module.exports = function (grunt) {
                 liveReload: {
                     apply_css_live: true,
                     apply_images_live: true
-                }
+                },
+                watchFiles: ['*.css']
             },
             proxyOnlyTest: {
                 port: 9001,
@@ -71,10 +72,23 @@ module.exports = function (grunt) {
                     debounceDelay:250
                 }
             },
-            liveReloadTest: {
-                files:['<config:lint.files>', '*.html', 'style.less', 'style1.less'],
-                tasks:['less', 'reload:liveReloadTest']
+            less: {
+                files:['style.less', 'style1.less', '*.html', '*.css'],
+                tasks:['less', 'reload:liveReloadTest'],
+                options:{
+                    interrupt:true,
+                    debounceDelay:1000
+                }
             }
+//            ,
+//            reloadCss:{
+//                files:['<config:lint.files>'],
+//                tasks:[],
+//                options:{
+//                    interrupt:true,
+//                    //debounceDelay:250
+//                }
+//            }
         }
     });
 
@@ -88,7 +102,7 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-jshint');
 
     grunt.registerTask('default', ['connect:connectProxyTest', 'reload:connectProxyTest', 'trigger', 'watch:default']);
-    grunt.registerTask('liveReload', ['connect:default', 'reload:liveReloadTest', 'watch:liveReloadTest']);
+    grunt.registerTask('liveReload', ['connect:default', 'reload:liveReloadTest', 'watch:less', 'watch:reloadCss']);
     grunt.registerTask('noProxy', ['connect:default', 'reload', 'trigger', 'watch:default']);
     grunt.registerTask('iframe', ['connect:default', 'reload:iframeTest', 'watch:default']);
     grunt.registerTask('proxyOnly', ['connect:default', 'reload:proxyOnlyTest', 'watch:default']);

@@ -1,6 +1,5 @@
-    'use strict';
-
 module.exports = function (grunt) {
+    'use strict';
 
     // Project configuration.
     grunt.initConfig({
@@ -8,64 +7,51 @@ module.exports = function (grunt) {
             files: ['test/**/*.js']
         },
         lint: {
-            files: ['grunt.js', 'tasks/**/*.js', 'test/**/*.js']
         },
         reload: {
-            proxy: {},
-            liveReload: {}
+            proxy: {}
         },
         connect: {
-            default: {
+            'default': {
                 options: {
                     port: 8000
                 }
             }
         },
-        trigger: {
-            watchFile: 'test/trigger.html'
-        },
         watch: {
-            options: {
-                interrupt: true
-            },
-            'default': {
-                files: ['<config:lint.files>'],
-                tasks: 'lint reload'
-            },
-            triggerTest: {
-                files: ['test/trigger.html'],
-                tasks: 'reload'
-            }
+            files: ['Gruntfile.js', 'tasks/reload.js', '**/*.html'],
+            tasks: ['reload']
         },
         jshint: {
-            options: {
-                curly: true,
-                eqeqeq: true,
-                immed: true,
-                latedef: true,
-                newcap: true,
-                noarg: true,
-                sub: true,
-                undef: true,
-                boss: true,
-                eqnull: true,
-                node: true,
-                es5: true
-            },
-            globals: {
-                WebSocket: true
+            all: ['Gruntfile.js', 'tasks/reload.js'],
+            options:{
+                curly:true,
+                eqeqeq:true,
+                immed:true,
+                latedef:true,
+                newcap:true,
+                noarg:true,
+                sub:true,
+                undef:true,
+                eqnull:true,
+                node:true,
+                es5:true,
+                strict:true,
+                globals: {
+                    require: true
+                }
             }
         }
     });
 
     grunt.loadNpmTasks('grunt-contrib-connect');
+    grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-contrib-watch');
 
     // Load local tasks.
     grunt.loadTasks('tasks');
     grunt.loadTasks('test/tasks');
 
-    grunt.registerTask('default', ['connect', 'reload', 'watch:default']);
-    grunt.registerTask('triggerTest', ['connect', 'reload', 'watch:triggerTest']);
+    grunt.registerTask('default', ['connect', 'reload', 'watch']);
 
 };

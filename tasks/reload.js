@@ -21,10 +21,12 @@ module.exports = function (grunt) {
     var httpProxy = require('http-proxy');
     var WebSocketServer = require("websocket").server;
     var request = require('request');
+    var minimatch = require('minimatch');
+
 
     function handleReload(wsServer, files, target) {
         var connections = wsServer.connections;
-        var path = files ? files.changed[0] : 'index.html';
+        var path = files ? Object.keys(files)[0] : 'index.html';
 
         // apply_js_live
         var msg = '{"command": "reload", "path": "' + path + '", "target": "' + target + '"}';
@@ -70,7 +72,7 @@ module.exports = function (grunt) {
 
         if (config.proxy) {
             var proxyConfig = config.proxy;
-            var connectOpts = grunt.config(['connect', target]).options;
+            var connectOpts = grunt.config(['connect', target]) && grunt.config(['connect', target]).options;
             var proxyOpts = {
                 target:{
                     host:proxyConfig.host || 'localhost',
@@ -234,15 +236,47 @@ module.exports = function (grunt) {
         var config = target ? grunt.config(['reload', target]) : grunt.config('reload');
         var port = config.port || grunt.config('reload').port || 8001;
 
+        var cliArgs = grunt.util._.without.apply(null, [[].slice.call(process.argv, 2)]);
+
         // First, try to trigger reload in already running server process
         var triggerUrl = 'http://localhost:' + port + '/triggerReload';
         console.log('Attempting reload at ' + triggerUrl);
+
+        // attempt to read changed files object from the watch command:
+        var changed, tmpChanged, changedParamStart = '--changed=';
+        console.log(cliArgs);
+        grunt.util._.each(cliArgs, function (arg) {
+            if (arg.indexOf(changedParamStart) === 0) {
+                changed = JSON.parse(arg.substr(changedParamStart.length));
+            }
+        });
+
+        if (changed && 'watchFiles' in config) {
+
+            tmpChanged = {};
+            grunt.util._.each(changed, function (val, key) {
+
+                grunt.util._.each(config.watchFiles, function (spec) {
+                    console.log(spec, val, key);
+                    if (minimatch(key, spec)) {
+                        tmpChanged[key] = val;
+                    }
+                });
+            });
+
+            if (!Object.keys(tmpChanged).length) {
+                console.log('No watchFiles matched.');
+                return;
+            }
+
+            changed = tmpChanged;
+        }
 
         request.post(
             {
                 url:triggerUrl,
                 json:{
-                    files:grunt.file.watchFiles,
+                    files:changed || {},
                     target:target
                 }
             },
