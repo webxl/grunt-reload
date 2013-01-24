@@ -65,7 +65,7 @@ module.exports = function (grunt) {
         },
         watch:{
             'default':{
-                files:['<config:lint.files>', '*.html', 'style.less', 'style1.less'],
+                files:['<config:lint.files>', '*.html', 'style.less'],
                 tasks:['less', 'reload'],
                 options:{
                     interrupt:true,
@@ -73,7 +73,7 @@ module.exports = function (grunt) {
                 }
             },
             less: {
-                files:['style.less', 'style1.less', '*.html', '*.css'],
+                files:['style.less', '*.html', '*.css'],
                 tasks:['less', 'reload:liveReloadTest'],
                 options:{
                     interrupt:true,
