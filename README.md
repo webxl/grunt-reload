@@ -1,3 +1,7 @@
+### NOTE: if it weren't already apparent, this project is no longer maintained. You're better off with grunt-contrib-watch which has reload support baked in or perhaps something else. The node module name will be unregistered soon (if possilbe)...
+
+(good to get that off my chest!)
+
 # grunt-reload
 
 A grunt task that enables live reloading of updated watch files in the browser.
